@@ -24,6 +24,7 @@ import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.junit.Rule;
 import org.junit.Test;
@@ -847,6 +848,13 @@ public class ProjectMeasuresIndexTest {
         entry(ERROR.name(), 0L),
         entry(WARN.name(), 3L),
         entry(OK.name(), 2L));
+  }
+
+  @Test
+  public void manyFavorites() {
+    ProjectMeasuresQuery query = new ProjectMeasuresQuery();
+    query.setProjectUuids(IntStream.range(0, 10000).mapToObj(Integer::toString).collect(Collectors.toSet()));
+    underTest.search(query, new SearchOptions());
   }
 
   private void index(ProjectMeasuresDoc... docs) {
