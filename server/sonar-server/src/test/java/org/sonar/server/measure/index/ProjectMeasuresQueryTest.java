@@ -23,12 +23,11 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.sonar.api.measures.Metric.Level;
-import org.sonar.server.measure.index.ProjectMeasuresQuery;
+import org.sonar.server.measure.index.ProjectMeasuresQuery.MetricCriterion;
 
 import static org.assertj.core.api.Java6Assertions.assertThat;
 import static org.assertj.core.groups.Tuple.tuple;
 import static org.sonar.api.measures.Metric.Level.OK;
-import static org.sonar.server.measure.index.ProjectMeasuresQuery.MetricCriterion;
 import static org.sonar.server.measure.index.ProjectMeasuresQuery.Operator.EQ;
 
 public class ProjectMeasuresQueryTest {
@@ -41,7 +40,8 @@ public class ProjectMeasuresQueryTest {
   @Test
   public void empty_query() throws Exception {
     assertThat(underTest.getMetricCriteria()).isEmpty();
-    assertThat(underTest.hasQualityGateStatus()).isFalse();
+    assertThat(underTest.getQualityGateStatus().isPresent()).isFalse();
+    assertThat(underTest.getOrganizationUuid().isPresent()).isFalse();
   }
 
   @Test

@@ -22,6 +22,7 @@ package org.sonar.server.component.ws;
 import com.google.common.base.Splitter;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -30,12 +31,12 @@ import javax.annotation.Nullable;
 import org.sonar.api.measures.Metric.Level;
 import org.sonar.core.util.stream.Collectors;
 import org.sonar.server.measure.index.ProjectMeasuresQuery;
+import org.sonar.server.measure.index.ProjectMeasuresQuery.MetricCriterion;
+import org.sonar.server.measure.index.ProjectMeasuresQuery.Operator;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Locale.ENGLISH;
 import static org.sonar.api.measures.CoreMetrics.ALERT_STATUS_KEY;
-import static org.sonar.server.measure.index.ProjectMeasuresQuery.MetricCriterion;
-import static org.sonar.server.measure.index.ProjectMeasuresQuery.Operator;
 
 class ProjectMeasuresQueryFactory {
   private static final Splitter CRITERIA_SPLITTER = Splitter.on(Pattern.compile("and", Pattern.CASE_INSENSITIVE));
@@ -59,9 +60,7 @@ class ProjectMeasuresQueryFactory {
 
   static ProjectMeasuresQuery newProjectMeasuresQuery(List<String> criteria, @Nullable Set<String> projectUuids) {
     ProjectMeasuresQuery res = new ProjectMeasuresQuery();
-    if (projectUuids != null) {
-      res.setProjectUuids(projectUuids);
-    }
+    Optional.ofNullable(projectUuids).ifPresent(res::setProjectUuids);
     criteria.forEach(criterion -> processCriterion(criterion, res));
     return res;
   }

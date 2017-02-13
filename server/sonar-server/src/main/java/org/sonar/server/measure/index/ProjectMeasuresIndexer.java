@@ -126,6 +126,7 @@ public class ProjectMeasuresIndexer extends BaseIndexer implements ProjectIndexe
     Long analysisDate = projectMeasures.getProject().getAnalysisDate();
     return new ProjectMeasuresDoc()
       .setId(projectMeasures.getProject().getUuid())
+      .setOrganizationUuid(projectMeasures.getProject().organizationUuid()/* missing */)
       .setKey(projectMeasures.getProject().getKey())
       .setName(projectMeasures.getProject().getName())
       .setQualityGate(projectMeasures.getMeasures().getQualityGateStatus())

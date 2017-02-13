@@ -26,13 +26,13 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collector;
 import java.util.stream.Stream;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nullable;
-import org.sonar.api.resources.Qualifiers;
 import org.sonar.api.server.ws.Request;
 import org.sonar.api.server.ws.Response;
 import org.sonar.api.server.ws.WebService;
@@ -171,9 +171,13 @@ public class SearchProjectsAction implements ComponentsWsAction {
     List<String> criteria = toCriteria(firstNonNull(request.getFilter(), ""));
 
     List<ComponentDto> favoriteProjects = searchFavoriteProjects(dbSession);
-    Set<String> projectUuids = buildFilterOnProjectUuids(dbSession, criteria, favoriteProjects, organization);
+    Set<String> projectUuids = buildFilterOnProjectUuids(dbSession, criteria, favoriteProjects);
 
     ProjectMeasuresQuery query = newProjectMeasuresQuery(criteria, projectUuids);
+    Optional.ofNullable(organization)
+      .map(OrganizationDto::getUuid)
+      .ifPresent(query::setOrganizationUuid);
+
     queryValidator.validate(dbSession, query);
 
     SearchIdResult<String> esResults = index.search(query, new SearchOptions()
@@ -197,23 +201,10 @@ public class SearchProjectsAction implements ComponentsWsAction {
    * </ul>
    */
   @CheckForNull
-  private Set<String> buildFilterOnProjectUuids(DbSession dbSession, List<String> criteria, List<ComponentDto> favoriteProjects, @Nullable OrganizationDto organization) {
+  private Set<String> buildFilterOnProjectUuids(DbSession dbSession, List<String> criteria, List<ComponentDto> favoriteProjects) {
     boolean hasIsFavouriteCriterion = hasIsFavouriteCriterion(criteria);
-    if (hasIsFavouriteCriterion && organization != null) {
-      return favoriteProjects.stream()
-        .filter(project -> project.getOrganizationUuid().equals(organization.getUuid()))
-        .map(ComponentDto::uuid)
-        .collect(toSet());
-    }
     if (hasIsFavouriteCriterion) {
       return favoriteProjects.stream()
-        .map(ComponentDto::uuid)
-        .collect(toSet());
-    }
-    if (organization != null) {
-      return dbClient.componentDao().selectAllRootsByOrganization(dbSession, organization.getUuid())
-        .stream()
-        .filter(componentDto -> Qualifiers.PROJECT.equals(componentDto.qualifier()))
         .map(ComponentDto::uuid)
         .collect(toSet());
     }
