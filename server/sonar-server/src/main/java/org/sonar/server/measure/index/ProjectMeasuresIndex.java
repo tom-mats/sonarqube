@@ -32,7 +32,7 @@ import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.search.aggregations.AbstractAggregationBuilder;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
 import org.elasticsearch.search.aggregations.bucket.range.RangeBuilder;
-import org.elasticsearch.search.sort.SortOrder;
+import org.elasticsearch.search.sort.FieldSortBuilder;
 import org.sonar.api.measures.Metric;
 import org.sonar.server.es.BaseIndex;
 import org.sonar.server.es.DefaultIndexSettingsElement;
@@ -50,6 +50,8 @@ import static org.elasticsearch.index.query.QueryBuilders.rangeQuery;
 import static org.elasticsearch.index.query.QueryBuilders.termQuery;
 import static org.elasticsearch.index.query.QueryBuilders.termsQuery;
 import static org.elasticsearch.search.aggregations.AggregationBuilders.filters;
+import static org.elasticsearch.search.sort.SortOrder.ASC;
+import static org.elasticsearch.search.sort.SortOrder.DESC;
 import static org.sonar.api.measures.CoreMetrics.ALERT_STATUS_KEY;
 import static org.sonar.api.measures.CoreMetrics.COVERAGE_KEY;
 import static org.sonar.api.measures.CoreMetrics.DUPLICATED_LINES_DENSITY_KEY;
@@ -93,8 +95,7 @@ public class ProjectMeasuresIndex extends BaseIndex {
       .setTypes(TYPE_PROJECT_MEASURE)
       .setFetchSource(false)
       .setFrom(searchOptions.getOffset())
-      .setSize(searchOptions.getLimit())
-      .addSort(DefaultIndexSettingsElement.SORTABLE_ANALYZER.subField(FIELD_NAME), SortOrder.ASC);
+      .setSize(searchOptions.getLimit());
 
     BoolQueryBuilder esFilter = boolQuery();
     Map<String, QueryBuilder> filters = createFilters(query);
@@ -102,7 +103,20 @@ public class ProjectMeasuresIndex extends BaseIndex {
     requestBuilder.setQuery(esFilter);
 
     addFacets(requestBuilder, searchOptions, filters);
+    addSort(query, requestBuilder);
     return new SearchIdResult<>(requestBuilder.get(), id -> id);
+  }
+
+  private static void addSort(ProjectMeasuresQuery query, SearchRequestBuilder requestBuilder) {
+    String sort = query.getSort();
+    if (sort != null) {
+      requestBuilder.addSort(
+        new FieldSortBuilder(FIELD_VALUE)
+          .setNestedPath(FIELD_MEASURES)
+          .setNestedFilter(termQuery(FIELD_KEY, sort))
+          .order(query.isAsc() ? ASC : DESC));
+    }
+    requestBuilder.addSort(DefaultIndexSettingsElement.SORTABLE_ANALYZER.subField(FIELD_NAME), ASC);
   }
 
   private static void addFacets(SearchRequestBuilder esSearch, SearchOptions options, Map<String, QueryBuilder> filters) {

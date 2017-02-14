@@ -71,9 +71,10 @@ public class ProjectMeasuresIndexTest {
   private static final String NCLOC = "ncloc";
 
   private static final OrganizationDto ORG = OrganizationTesting.newOrganizationDto();
-  private static final ComponentDto PROJECT1 = newProjectDto(ORG);
-  private static final ComponentDto PROJECT2 = newProjectDto(ORG);
-  private static final ComponentDto PROJECT3 = newProjectDto(ORG);
+  private static final ComponentDto PROJECT1 = newProjectDto(ORG).setUuid("Project-1");
+  private static final ComponentDto PROJECT2 = newProjectDto(ORG).setUuid("Project-2");
+  private static final ComponentDto PROJECT3 = newProjectDto(ORG).setUuid("Project-3");
+  private static final ComponentDto PROJECT4 = newProjectDto(ORG).setUuid("Project-4");
   private static final UserDto USER1 = newUserDto();
   private static final UserDto USER2 = newUserDto();
   private static final GroupDto GROUP1 = newGroupDto();
@@ -95,7 +96,7 @@ public class ProjectMeasuresIndexTest {
   }
 
   @Test
-  public void search_sort_by_case_insensitive_name() {
+  public void default_sort_is_by_case_insensitive_name() {
     ComponentDto projectA = newProjectDto(ORG).setName("Windows");
     ComponentDto projectB = newProjectDto(ORG).setName("apachee");
     ComponentDto projectC = newProjectDto(ORG).setName("Apache");
@@ -105,7 +106,32 @@ public class ProjectMeasuresIndexTest {
   }
 
   @Test
-  public void search_paginate_results() {
+  public void sort_by_ncloc() {
+    index(
+      newDoc(PROJECT1, NCLOC, 15_000d),
+      newDoc(PROJECT2, NCLOC, 30_000d),
+      newDoc(PROJECT3, NCLOC, 1_000d)
+    );
+
+    assertResults(new ProjectMeasuresQuery().setSort("ncloc").setAsc(true), PROJECT3, PROJECT1, PROJECT2);
+    assertResults(new ProjectMeasuresQuery().setSort("ncloc").setAsc(false), PROJECT2, PROJECT1, PROJECT3);
+  }
+
+  @Test
+  public void sort_by_a_metric_then_by_name() {
+    index(
+      newDoc(PROJECT1.setName("Project 1"), NCLOC, 10_000d),
+      newDoc(PROJECT4.setName("Project 4"), NCLOC, 5_000d),
+      newDoc(PROJECT2.setName("Project 2"), NCLOC, 5_000d),
+      newDoc(PROJECT3.setName("Project 3"), NCLOC, 5_000d)
+    );
+
+    assertResults(new ProjectMeasuresQuery().setSort("ncloc").setAsc(true), PROJECT2, PROJECT3, PROJECT4, PROJECT1);
+    assertResults(new ProjectMeasuresQuery().setSort("ncloc").setAsc(false), PROJECT1, PROJECT2, PROJECT3, PROJECT4);
+  }
+
+  @Test
+  public void paginate_results() {
     IntStream.rangeClosed(1, 9)
         .forEach(i -> index(newDoc(newProjectDto(ORG, "P" + i))));
 
